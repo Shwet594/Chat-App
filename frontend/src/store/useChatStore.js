@@ -1,0 +1,267 @@
+import { create } from "zustand";
+import { axiosInstance } from "../lib/axios";
+import { socket } from "../lib/socket";
+
+export const useChatStore = create((set, get) => ({
+  messages: [],
+  users: [],
+  groups: [],
+
+  selectedUser: null,
+  selectedGroup: null,
+
+  getUsers: async () => {
+    try {
+      const res = await axiosInstance.get("/messages/users");
+
+      set({
+        users: res.data,
+      });
+    } catch (error) {
+      console.log(error);
+    }
+  },
+
+  getMessages: async (userId) => {
+    try {
+      const res = await axiosInstance.get(`/messages/${userId}`);
+
+      set({
+        messages: res.data,
+      });
+    } catch (error) {
+      console.log(error);
+    }
+  },
+
+  sendMessage: async (messageData) => {
+    try {
+      const { selectedUser } = get();
+
+      const res = await axiosInstance.post(
+        `/messages/send/${selectedUser._id}`,
+        messageData
+      );
+
+      set({
+        messages: [...get().messages, res.data],
+      });
+    } catch (error) {
+      console.log(error);
+    }
+  },
+
+  subscribeToMessages: () => {
+    const { selectedUser } = get();
+
+    if (!selectedUser) return;
+
+    socket.off("newMessage");
+
+    socket.on("newMessage", (newMessage) => {
+      if (
+        newMessage.senderId.toString() !==
+        selectedUser._id.toString()
+      ) {
+        return;
+      }
+
+      set({
+        messages: [...get().messages, newMessage],
+      });
+    });
+  },
+
+  unsubscribeFromMessages: () => {
+    socket.off("newMessage");
+  },
+
+  getGroups: async () => {
+    try {
+      const res = await axiosInstance.get("/groups/getgroups");
+
+      set({
+        groups: res.data,
+      });
+    } catch (error) {
+      console.log(error);
+    }
+  },
+
+  getGroupMessages: async (groupId) => {
+    try {
+      const res = await axiosInstance.get(
+        `/groups/messages/${groupId}`
+      );
+
+      set({
+        messages: res.data,
+      });
+    } catch (error) {
+      console.log(error);
+    }
+  },
+
+  sendGroupMessage: async (messageData) => {
+    try {
+      const { selectedGroup } = get();
+
+      const res = await axiosInstance.post(
+        `/groups/send/${selectedGroup._id}`,
+        messageData
+      );
+
+      set({
+        messages: [...get().messages, res.data],
+      });
+    } catch (error) {
+      console.log(error);
+    }
+  },
+
+ subscribeToGroupMessages: () => {
+  const { selectedGroup } = get();
+
+  if (!selectedGroup) return;
+
+  // JOIN ROOM
+  socket.emit("joinGroup", selectedGroup._id);
+
+  socket.off("newGroupMessage");
+
+  socket.on("newGroupMessage", (message) => {
+    const currentGroup = get().selectedGroup;
+
+    if (!currentGroup) return;
+
+    if (
+      message.groupId.toString() !==
+      currentGroup._id.toString()
+    ) {
+      return;
+    }
+
+    set({
+      messages: [
+        ...get().messages,
+        message,
+      ],
+    });
+  });
+},
+
+  unsubscribeFromGroupMessages: () => {
+    socket.off("newGroupMessage");
+  },
+
+  setSelectedUser: (user) =>
+    set({
+      selectedUser: user,
+      selectedGroup: null,
+      messages: [],
+    }),
+  getGroupMembers: async (groupId) => {
+  try {
+    const res = await axiosInstance.get(
+      `/groups/${groupId}/members`
+    );
+
+    return res.data;
+  } catch (error) {
+    console.log(error);
+  }
+},
+
+addMember: async (groupId, userId) => {
+  try {
+    await axiosInstance.put(
+      `/groups/${groupId}/add-member`,
+      { userId }
+    );
+
+    await get().getGroups();
+  } catch (error) {
+    console.log(error);
+  }
+},
+
+removeMember: async (
+  groupId,
+  userId
+) => {
+  try {
+    await axiosInstance.put(
+      `/groups/${groupId}/remove-member`,
+      { userId }
+    );
+
+    await get().getGroups();
+  } catch (error) {
+    console.log(error);
+  }
+},
+
+leaveGroup: async (groupId) => {
+  try {
+    await axiosInstance.put(
+      `/groups/${groupId}/leave`
+    );
+
+    set({
+      selectedGroup: null,
+      messages: [],
+    });
+
+    await get().getGroups();
+  } catch (error) {
+    console.log(error);
+  }
+},
+
+deleteGroup: async (groupId) => {
+  try {
+    await axiosInstance.delete(
+      `/groups/${groupId}`
+    );
+
+    set({
+      selectedGroup: null,
+      messages: [],
+    });
+
+    await get().getGroups();
+  } catch (error) {
+    console.log(error);
+  }
+},
+
+createGroup: async (
+  name,
+  members
+) => {
+  try {
+    const res = await axiosInstance.post(
+      "/groups/creategroup",
+      {
+        name,
+        members,
+      }
+    );
+
+    set({
+      groups: [
+        ...get().groups,
+        res.data,
+      ],
+    });
+  } catch (error) {
+    console.log(error);
+  }
+},
+  setSelectedGroup: (group) =>
+    set({
+      selectedGroup: group,
+      selectedUser: null,
+      messages: [],
+    }),
+}));
