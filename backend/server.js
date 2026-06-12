@@ -15,7 +15,7 @@ app.use(express.json({ limit: "10mb" }));
 
 app.use(
   cors({
-    origin: "http://localhost:5173",
+    origin: "https://chat-app-teal-seven-33.vercel.app",
     credentials: true,
   })
 );
