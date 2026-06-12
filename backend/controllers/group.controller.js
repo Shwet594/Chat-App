@@ -112,9 +112,23 @@ export const addMember = async (
   res
 ) => {
   try {
+    const group =
+      await Group.findById(
+        req.params.groupId
+      );
+
+    if (
+      group.admin.toString() !==
+      req.user._id.toString()
+    ) {
+      return res.status(403).json({
+        message: "Only admin can add members",
+      });
+    }
+
     const { userId } = req.body;
 
-    const group =
+    const updatedGroup =
       await Group.findByIdAndUpdate(
         req.params.groupId,
         {
@@ -122,12 +136,12 @@ export const addMember = async (
             members: userId,
           },
         },
-        {
-          new: true,
-        }
+        { new: true }
       );
 
-    res.status(200).json(group);
+    res
+      .status(200)
+      .json(updatedGroup);
   } catch (error) {
     console.log(error);
     res.status(500).json({
@@ -140,9 +154,24 @@ export const removeMember = async (
   res
 ) => {
   try {
+    const group =
+      await Group.findById(
+        req.params.groupId
+      );
+
+    if (
+      group.admin.toString() !==
+      req.user._id.toString()
+    ) {
+      return res.status(403).json({
+        message:
+          "Only admin can remove members",
+      });
+    }
+
     const { userId } = req.body;
 
-    const group =
+    const updatedGroup =
       await Group.findByIdAndUpdate(
         req.params.groupId,
         {
@@ -150,12 +179,12 @@ export const removeMember = async (
             members: userId,
           },
         },
-        {
-          new: true,
-        }
+        { new: true }
       );
 
-    res.status(200).json(group);
+    res
+      .status(200)
+      .json(updatedGroup);
   } catch (error) {
     console.log(error);
     res.status(500).json({

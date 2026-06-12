@@ -40,7 +40,7 @@ export const useChatStore = create((set, get) => ({
 
       const res = await axiosInstance.post(
         `/messages/send/${selectedUser._id}`,
-        messageData
+        messageData,
       );
 
       set({
@@ -59,10 +59,7 @@ export const useChatStore = create((set, get) => ({
     socket.off("newMessage");
 
     socket.on("newMessage", (newMessage) => {
-      if (
-        newMessage.senderId.toString() !==
-        selectedUser._id.toString()
-      ) {
+      if (newMessage.senderId.toString() !== selectedUser._id.toString()) {
         return;
       }
 
@@ -90,9 +87,7 @@ export const useChatStore = create((set, get) => ({
 
   getGroupMessages: async (groupId) => {
     try {
-      const res = await axiosInstance.get(
-        `/groups/messages/${groupId}`
-      );
+      const res = await axiosInstance.get(`/groups/messages/${groupId}`);
 
       set({
         messages: res.data,
@@ -106,51 +101,53 @@ export const useChatStore = create((set, get) => ({
     try {
       const { selectedGroup } = get();
 
-      const res = await axiosInstance.post(
+      await axiosInstance.post(
         `/groups/send/${selectedGroup._id}`,
-        messageData
+        messageData,
       );
 
-      set({
-        messages: [...get().messages, res.data],
-      });
+      // socket event will update state
     } catch (error) {
       console.log(error);
     }
   },
 
- subscribeToGroupMessages: () => {
-  const { selectedGroup } = get();
+  subscribeToGroupMessages: () => {
+    const { selectedGroup } = get();
 
-  if (!selectedGroup) return;
+    if (!selectedGroup) return;
 
-  // JOIN ROOM
-  socket.emit("joinGroup", selectedGroup._id);
+    // JOIN ROOM
+    socket.emit("joinGroup", selectedGroup._id);
 
-  socket.off("newGroupMessage");
+    socket.off("newGroupMessage");
 
-  socket.on("newGroupMessage", (message) => {
-    const currentGroup = get().selectedGroup;
+    socket.on("newGroupMessage", (message) => {
+      const currentGroup = get().selectedGroup;
 
-    if (!currentGroup) return;
+      if (!currentGroup) return;
 
-    if (
-      message.groupId.toString() !==
-      currentGroup._id.toString()
-    ) {
-      return;
-    }
+      if (message.groupId.toString() !== currentGroup._id.toString()) {
+        return;
+      }
 
-    set({
-      messages: [
-        ...get().messages,
-        message,
-      ],
+      const exists = get().messages.some((msg) => msg._id === message._id);
+
+      if (exists) return;
+
+      set({
+        messages: [...get().messages, message],
+      });
     });
-  });
-},
+  },
 
   unsubscribeFromGroupMessages: () => {
+    const currentGroup = get().selectedGroup;
+
+    if (currentGroup) {
+      socket.emit("leaveGroup", currentGroup._id);
+    }
+
     socket.off("newGroupMessage");
   },
 
@@ -161,103 +158,79 @@ export const useChatStore = create((set, get) => ({
       messages: [],
     }),
   getGroupMembers: async (groupId) => {
-  try {
-    const res = await axiosInstance.get(
-      `/groups/${groupId}/members`
-    );
+    try {
+      const res = await axiosInstance.get(`/groups/${groupId}/members`);
 
-    return res.data;
-  } catch (error) {
-    console.log(error);
-  }
-},
+      return res.data;
+    } catch (error) {
+      console.log(error);
+    }
+  },
 
-addMember: async (groupId, userId) => {
-  try {
-    await axiosInstance.put(
-      `/groups/${groupId}/add-member`,
-      { userId }
-    );
+  addMember: async (groupId, userId) => {
+    try {
+      await axiosInstance.put(`/groups/${groupId}/add-member`, { userId });
 
-    await get().getGroups();
-  } catch (error) {
-    console.log(error);
-  }
-},
+      await get().getGroups();
+    } catch (error) {
+      console.log(error);
+    }
+  },
 
-removeMember: async (
-  groupId,
-  userId
-) => {
-  try {
-    await axiosInstance.put(
-      `/groups/${groupId}/remove-member`,
-      { userId }
-    );
+  removeMember: async (groupId, userId) => {
+    try {
+      await axiosInstance.put(`/groups/${groupId}/remove-member`, { userId });
 
-    await get().getGroups();
-  } catch (error) {
-    console.log(error);
-  }
-},
+      await get().getGroups();
+    } catch (error) {
+      console.log(error);
+    }
+  },
 
-leaveGroup: async (groupId) => {
-  try {
-    await axiosInstance.put(
-      `/groups/${groupId}/leave`
-    );
+  leaveGroup: async (groupId) => {
+    try {
+      await axiosInstance.put(`/groups/${groupId}/leave`);
 
-    set({
-      selectedGroup: null,
-      messages: [],
-    });
+      set({
+        selectedGroup: null,
+        messages: [],
+      });
 
-    await get().getGroups();
-  } catch (error) {
-    console.log(error);
-  }
-},
+      await get().getGroups();
+    } catch (error) {
+      console.log(error);
+    }
+  },
 
-deleteGroup: async (groupId) => {
-  try {
-    await axiosInstance.delete(
-      `/groups/${groupId}`
-    );
+  deleteGroup: async (groupId) => {
+    try {
+      await axiosInstance.delete(`/groups/${groupId}`);
 
-    set({
-      selectedGroup: null,
-      messages: [],
-    });
+      set({
+        selectedGroup: null,
+        messages: [],
+      });
 
-    await get().getGroups();
-  } catch (error) {
-    console.log(error);
-  }
-},
+      await get().getGroups();
+    } catch (error) {
+      console.log(error);
+    }
+  },
 
-createGroup: async (
-  name,
-  members
-) => {
-  try {
-    const res = await axiosInstance.post(
-      "/groups/creategroup",
-      {
+  createGroup: async (name, members) => {
+    try {
+      const res = await axiosInstance.post("/groups/creategroup", {
         name,
         members,
-      }
-    );
+      });
 
-    set({
-      groups: [
-        ...get().groups,
-        res.data,
-      ],
-    });
-  } catch (error) {
-    console.log(error);
-  }
-},
+      set({
+        groups: [...get().groups, res.data],
+      });
+    } catch (error) {
+      console.log(error);
+    }
+  },
   setSelectedGroup: (group) =>
     set({
       selectedGroup: group,
