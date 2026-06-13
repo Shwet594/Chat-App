@@ -55,13 +55,16 @@ socket.on("getOnlineUsers", (users) => {
     }
   },
   checkAuth: async () => {
+  console.log("CHECK AUTH RUNNING");
+
   try {
     const res = await axiosInstance.get("/auth/check");
 
     set({ authUser: res.data });
 
-    socket.disconnect(); // 👈 important reset
-    get().connectSocket();
+    if (!socket.connected) {
+      get().connectSocket();
+    }
   } catch (error) {
     set({ authUser: null });
   } finally {

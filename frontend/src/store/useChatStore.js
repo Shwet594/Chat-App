@@ -35,39 +35,46 @@ export const useChatStore = create((set, get) => ({
   },
 
   sendMessage: async (messageData) => {
-    try {
-      const { selectedUser } = get();
-
-      const res = await axiosInstance.post(
-        `/messages/send/${selectedUser._id}`,
-        messageData,
-      );
-
-      set({
-        messages: [...get().messages, res.data],
-      });
-    } catch (error) {
-      console.log(error);
-    }
-  },
-
-  subscribeToMessages: () => {
+  try {
     const { selectedUser } = get();
 
-    if (!selectedUser) return;
+    await axiosInstance.post(
+      `/messages/send/${selectedUser._id}`,
+      messageData
+    );
 
-    socket.off("newMessage");
+    // DON'T set messages here
+    // socket event will handle it
+  } catch (error) {
+    console.log(error);
+  }
+},
 
-    socket.on("newMessage", (newMessage) => {
-      if (newMessage.senderId.toString() !== selectedUser._id.toString()) {
-        return;
-      }
+  subscribeToMessages: () => {
+  socket.off("newMessage");
 
-      set({
-        messages: [...get().messages, newMessage],
-      });
+  socket.on("newMessage", (newMessage) => {
+    const currentUser = get().selectedUser;
+
+    if (!currentUser) return;
+
+    const isValid =
+      newMessage.senderId === currentUser._id ||
+      newMessage.receiverId === currentUser._id;
+
+    if (!isValid) return;
+
+    const exists = get().messages.some(
+      (msg) => msg._id === newMessage._id
+    );
+
+    if (exists) return;
+
+    set({
+      messages: [...get().messages, newMessage],
     });
-  },
+  });
+},
 
   unsubscribeFromMessages: () => {
     socket.off("newMessage");
