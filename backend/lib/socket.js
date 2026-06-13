@@ -1,68 +1,51 @@
 import { Server } from "socket.io";
-import http from "http";
-import express from "express";
 
-const app = express();
-const server = http.createServer(app);
+// will hold io instance
+export let io;
 
-const io = new Server(server, {
-  cors: {
-    origin: "https://chat-app-teal-seven-33.vercel.app",
-    credentials: true,
-  },
-});
-
+// store user -> socket mapping
 const userSocketMap = {};
 
-export const getReceiverSocketId = (
-  userId
-) => userSocketMap[userId];
-
-io.on("connection", (socket) => {
-  console.log(
-    "User connected:",
-    socket.id
-  );
-
-  const userId =
-    socket.handshake.query.userId;
-
-  if (userId) {
-    userSocketMap[userId] = socket.id;
-  }
-
-  io.emit(
-    "getOnlineUsers",
-    Object.keys(userSocketMap)
-  );
-
-  socket.on(
-    "joinGroup",
-    (groupId) => {
-      socket.join(groupId);
-    }
-  );
-
-  socket.on(
-    "leaveGroup",
-    (groupId) => {
-      socket.leave(groupId);
-    }
-  );
-
-  socket.on("disconnect", () => {
-    delete userSocketMap[userId];
-
-    io.emit(
-      "getOnlineUsers",
-      Object.keys(userSocketMap)
-    );
-
-    console.log(
-      "User disconnected:",
-      socket.id
-    );
+export const initSocket = (server) => {
+  io = new Server(server, {
+    cors: {
+      origin: process.env.URL,
+      credentials: true,
+    },
   });
-});
 
-export { io, app, server };
+  io.on("connection", (socket) => {
+    console.log("User connected:", socket.id);
+
+    const userId = socket.handshake.query.userId;
+
+    if (userId) {
+      userSocketMap[userId] = socket.id;
+    }
+
+    // send online users
+    io.emit("getOnlineUsers", Object.keys(userSocketMap));
+
+    // join group room
+    socket.on("joinGroup", (groupId) => {
+      socket.join(groupId);
+    });
+
+    socket.on("leaveGroup", (groupId) => {
+      socket.leave(groupId);
+    });
+
+    socket.on("disconnect", () => {
+      console.log("User disconnected:", socket.id);
+
+      delete userSocketMap[userId];
+
+      io.emit("getOnlineUsers", Object.keys(userSocketMap));
+    });
+  });
+};
+
+// helper function for private messages
+export const getReceiverSocketId = (userId) => {
+  return userSocketMap[userId];
+};

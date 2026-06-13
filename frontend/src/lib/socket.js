@@ -1,7 +1,7 @@
 import { io } from "socket.io-client";
 
 export const socket = io(
-  "https://chat-app-hc7g.onrender.com/api",
+  import.meta.env.VITE_SOCKET_URL,
   {
     autoConnect: false,
     withCredentials: true,
