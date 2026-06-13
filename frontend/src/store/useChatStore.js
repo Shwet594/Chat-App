@@ -42,6 +42,9 @@ export const useChatStore = create((set, get) => ({
       `/messages/send/${selectedUser._id}`,
       messageData
     );
+      set({
+      messages: [...get().messages, res.data],
+    });
 
     // DON'T set messages here
     // socket event will handle it
