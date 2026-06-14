@@ -14,6 +14,7 @@ const Sidebar = () => {
     selectedGroup,
     setSelectedUser,
     setSelectedGroup,
+    subscribeToUserUpdates
   } = useChatStore();
 
   const { onlineUsers, logout } =
@@ -26,7 +27,8 @@ const Sidebar = () => {
   useEffect(() => {
     getUsers();
     getGroups();
-  }, []);
+    subscribeToUserUpdates();
+  }, [onlineUsers]);
 
   return (
     <>

@@ -5,14 +5,18 @@ import LoginPage from "./pages/LoginPage";
 import SignUpPage from "./pages/SignUpPage";
 import ProfilePage from "./pages/ProfilePage";
 import { useAuthStore } from "./store/useAuthStore";
+
 function App() {
-  const { authUser, checkAuth, isCheckingAuth } = useAuthStore();
+  const { authUser, checkAuth } = useAuthStore();
+
+  // ✅ run once on app load
   useEffect(() => {
     checkAuth();
   }, []);
-  if (isCheckingAuth) {
-    return <div>Loading...</div>;
-  }
+
+  // ❌ removed focus re-check (it causes lag + repeated API calls)
+  // we’ll rely on socket reconnect instead (better UX)
+
   return (
     <Routes>
       <Route
@@ -34,4 +38,5 @@ function App() {
     </Routes>
   );
 }
+
 export default App;

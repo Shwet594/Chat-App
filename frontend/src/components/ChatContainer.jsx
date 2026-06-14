@@ -17,30 +17,21 @@ const ChatContainer = () => {
     unsubscribeFromGroupMessages,
   } = useChatStore();
 
-  const { authUser } =
-    useAuthStore();
+  const { authUser } = useAuthStore();
 
-  const messagesRef =
-    useRef(null);
+  const messagesRef = useRef(null);
 
-  const [showGroupInfo,
-    setShowGroupInfo] =
-    useState(false);
+  const [showGroupInfo, setShowGroupInfo] = useState(false);
 
+  // Load messages + subscribe
   useEffect(() => {
     if (selectedUser) {
-      getMessages(
-        selectedUser._id
-      );
-
+      getMessages(selectedUser._id);
       subscribeToMessages();
     }
 
     if (selectedGroup) {
-      getGroupMessages(
-        selectedGroup._id
-      );
-
+      getGroupMessages(selectedGroup._id);
       subscribeToGroupMessages();
     }
 
@@ -48,22 +39,19 @@ const ChatContainer = () => {
       unsubscribeFromMessages();
       unsubscribeFromGroupMessages();
     };
-  }, [
-    selectedUser,
-    selectedGroup,
-  ]);
+  }, [selectedUser, selectedGroup]);
 
+  // Auto scroll
   useEffect(() => {
     if (messagesRef.current) {
-      messagesRef.current.scrollTop =
-        messagesRef.current.scrollHeight;
+      messagesRef.current.scrollTo({
+        top: messagesRef.current.scrollHeight,
+        behavior: "smooth",
+      });
     }
   }, [messages]);
 
-  if (
-    !selectedUser &&
-    !selectedGroup
-  ) {
+  if (!selectedUser && !selectedGroup) {
     return (
       <div className="flex-1 flex items-center justify-center text-base-content/60">
         Select a user or group
@@ -72,141 +60,98 @@ const ChatContainer = () => {
   }
 
   return (
-    <>
-      <div className="flex-1 flex flex-col h-full overflow-hidden">
-        <div className="p-4 border-b border-base-300 bg-base-100">
-          {selectedUser && (
-            <div className="flex items-center gap-3">
-              <img
-                src={
-                  selectedUser.profilePic ||
-                  "/avatar.png"
-                }
-                alt=""
-                className="size-10 rounded-full object-cover"
-              />
+    <div className="flex-1 flex flex-col h-full overflow-hidden">
+      {/* HEADER */}
+      <div className="p-4 border-b border-base-300 bg-base-100 shrink-0">
+        {selectedUser && (
+          <div className="flex items-center gap-3">
+            <img
+              src={selectedUser.profilePic || "/avatar.png"}
+              alt=""
+              className="size-10 rounded-full object-cover"
+            />
+            <h2 className="font-bold">{selectedUser.fullName}</h2>
+          </div>
+        )}
 
-              <h2 className="font-bold">
-                {
-                  selectedUser.fullName
-                }
-              </h2>
+        {selectedGroup && (
+          <button
+            onClick={() => setShowGroupInfo(true)}
+            className="flex items-center gap-3 hover:opacity-80"
+          >
+            <div className="size-10 rounded-full bg-primary/20 flex items-center justify-center">
+              👥
             </div>
-          )}
 
-          {selectedGroup && (
-            <button
-              onClick={() =>
-                setShowGroupInfo(
-                  true
-                )
-              }
-              className="flex items-center gap-3 hover:opacity-80"
+            <div className="text-left">
+              <h2 className="font-bold">{selectedGroup.name}</h2>
+              <p className="text-xs opacity-60">
+                Click to manage group
+              </p>
+            </div>
+          </button>
+        )}
+      </div>
+
+      {/* MESSAGES (SCROLLABLE AREA) */}
+      <div
+        ref={messagesRef}
+        className="flex-1 min-h-0 overflow-y-auto p-4 space-y-4"
+      >
+        {messages.map((message) => {
+          const isMe = selectedGroup
+            ? message.senderId?._id === authUser._id
+            : message.senderId?.toString() === authUser._id.toString();
+
+          return (
+            <div
+              key={message._id}
+              className={`flex ${
+                isMe ? "justify-end" : "justify-start"
+              }`}
             >
-              <div className="size-10 rounded-full bg-primary/20 flex items-center justify-center">
-                👥
-              </div>
+              <div className="max-w-[70%]">
+                {selectedGroup && !isMe && (
+                  <div className="flex items-center gap-2 mb-1">
+                    <img
+                      src={message.senderId?.profilePic || "/avatar.png"}
+                      alt=""
+                      className="size-7 rounded-full"
+                    />
+                    <span className="text-xs font-semibold">
+                      {message.senderId?.fullName}
+                    </span>
+                  </div>
+                )}
 
-              <div className="text-left">
-                <h2 className="font-bold">
-                  {
-                    selectedGroup.name
-                  }
-                </h2>
-
-                <p className="text-xs opacity-60">
-                  Click to manage group
-                </p>
-              </div>
-            </button>
-          )}
-        </div>
-
-        <div
-          ref={messagesRef}
-          className="flex-1 overflow-y-auto p-4 space-y-4"
-        >
-          {messages.map(
-            (message) => {
-              const isMe =
-                selectedGroup
-                  ? message
-                      .senderId?._id ===
-                    authUser._id
-                  : message.senderId?.toString() ===
-                    authUser._id.toString();
-
-              return (
                 <div
-                  key={
-                    message._id
-                  }
-                  className={`flex ${
+                  className={`px-4 py-2 rounded-2xl break-words ${
                     isMe
-                      ? "justify-end"
-                      : "justify-start"
+                      ? "bg-primary text-primary-content"
+                      : "bg-base-300"
                   }`}
                 >
-                  <div className="max-w-[70%]">
-                    {selectedGroup &&
-                      !isMe && (
-                        <div className="flex items-center gap-2 mb-1">
-                          <img
-                            src={
-                              message
-                                .senderId
-                                ?.profilePic ||
-                              "/avatar.png"
-                            }
-                            alt=""
-                            className="size-7 rounded-full"
-                          />
-
-                          <span className="text-xs font-semibold">
-                            {
-                              message
-                                .senderId
-                                ?.fullName
-                            }
-                          </span>
-                        </div>
-                      )}
-
-                    <div
-                      className={`px-4 py-2 rounded-2xl break-words ${
-                        isMe
-                          ? "bg-primary text-primary-content"
-                          : "bg-base-300"
-                      }`}
-                    >
-                      {
-                        message.text
-                      }
-                    </div>
-                  </div>
+                  {message.text}
                 </div>
-              );
-            }
-          )}
-        </div>
+              </div>
+            </div>
+          );
+        })}
+      </div>
 
+      {/* INPUT (FIXED BOTTOM) */}
+      <div className="shrink-0">
         <MessageInput />
       </div>
 
-      {showGroupInfo &&
-        selectedGroup && (
-          <GroupInfoModal
-            group={
-              selectedGroup
-            }
-            closeModal={() =>
-              setShowGroupInfo(
-                false
-              )
-            }
-          />
-        )}
-    </>
+      {/* GROUP MODAL */}
+      {showGroupInfo && selectedGroup && (
+        <GroupInfoModal
+          group={selectedGroup}
+          closeModal={() => setShowGroupInfo(false)}
+        />
+      )}
+    </div>
   );
 };
 

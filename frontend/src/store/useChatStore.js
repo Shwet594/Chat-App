@@ -42,6 +42,7 @@ export const useChatStore = create((set, get) => ({
       `/messages/send/${selectedUser._id}`,
       messageData
     );
+  
       set({
       messages: [...get().messages, res.data],
     });
@@ -58,7 +59,7 @@ export const useChatStore = create((set, get) => ({
 
   socket.on("newMessage", (newMessage) => {
     const currentUser = get().selectedUser;
-
+    console.log("Received realtime:", newMessage);
     if (!currentUser) return;
 
     const isValid =
@@ -247,4 +248,15 @@ export const useChatStore = create((set, get) => ({
       selectedUser: null,
       messages: [],
     }),
+    subscribeToUserUpdates: () => {
+  socket.off("userUpdated");
+
+  socket.on("userUpdated", (updatedUser) => {
+    set((state) => ({
+      users: state.users.map((u) =>
+        u._id === updatedUser._id ? updatedUser : u
+      ),
+    }));
+  });
+},
 }));

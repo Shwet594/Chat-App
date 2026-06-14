@@ -1,5 +1,6 @@
 import User from "../models/user.model.js";
 import bcrypt from "bcryptjs";
+import { io } from "../lib/socket.js";
 import generateToken from "../lib/utils.js";
 import cloudinary from "../lib/cloudinary.js"
 export const signup = async (req, res) => {
@@ -100,10 +101,12 @@ export const checkAuth = (req, res) => {
 };
 export const updateProfile = async (req, res) => {
   try {
-  
-    const { profilePic, fullName } = req.body;
+    console.log("1. Route hit");
 
+    const { profilePic, fullName } = req.body;
     const userId = req.user._id;
+
+    console.log("2. User:", userId);
 
     const updateData = {};
 
@@ -112,23 +115,31 @@ export const updateProfile = async (req, res) => {
     }
 
     if (profilePic) {
-      const uploadResponse =
-        await cloudinary.uploader.upload(profilePic);
+      console.log("3. Starting Cloudinary upload");
 
-      updateData.profilePic =
-        uploadResponse.secure_url;
+      const uploadResponse = await cloudinary.uploader.upload(profilePic);
+
+      console.log("4. Cloudinary success");
+
+      updateData.profilePic = uploadResponse.secure_url;
     }
-    const updatedUser =
-      await User.findByIdAndUpdate(
-        userId,
-        updateData,
-        {
-          new: true,
-        }
-      ).select("-password");
+
+    console.log("5. Updating MongoDB");
+
+    const updatedUser = await User.findByIdAndUpdate(
+      userId,
+      updateData,
+      { new: true }
+    ).select("-password");
+
+    console.log("6. MongoDB success");
 
     res.status(200).json(updatedUser);
+
   } catch (error) {
-    console.log(error);
+    console.error(error);
+    res.status(500).json({
+      message: error.message,
+    });
   }
 };
